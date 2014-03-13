@@ -1,4 +1,4 @@
-class BaseExchangeAdapter
+class ExchangeAdapterBase
 
   attr_accessor :orders
 

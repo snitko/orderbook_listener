@@ -1,6 +1,6 @@
 require 'spec_helper'
 
-require File.dirname(__FILE__) + '/../../lib/exchange_adapters/base_exchange_adapter'
+require File.dirname(__FILE__) + '/../../lib/exchange_adapters/exchange_adapter_base'
 require File.dirname(__FILE__) + '/../../lib/orderbook'
 
 
@@ -8,7 +8,7 @@ require File.dirname(__FILE__) + '/../../lib/orderbook'
 describe Orderbook do
 
   before(:all) do
-    @test_exchange        = BaseExchangeAdapter.new
+    @test_exchange        = ExchangeAdapterBase.new
     @test_exchange.orders = {
       1  => [{ price: 850, size: 50 }, { price: 855.5, size: 51 }, { price: 857.3, size: 0.006 }],
       -1 => [{ price: 849, size: 50 }, { price: 847.5, size: 51 }, { price: 845.3, size: 0.006 }]

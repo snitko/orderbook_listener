@@ -1,0 +1,5 @@
+class BistampAdapter < ExchangeAdapterBase
+
+  
+
+end
