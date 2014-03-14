@@ -12,7 +12,8 @@ class Orderbook
   end
 
   def load
-    @exchange_adapter.orders[@direction].each do |item|
+    @exchange_adapter.orders(direction: @direction).each do |item|
+      item = @exchange_adapter.class.standartize_item(item)
       add_item(item[:price], item[:size], force: true)
     end
   end
