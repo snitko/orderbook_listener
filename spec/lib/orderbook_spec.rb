@@ -5,6 +5,7 @@ require File.dirname(__FILE__) + '/../../lib/orderbook'
 
 class ExchangeAdapterBase
   attr_writer :orders
+  include ObservableRoles::Publisher
 end
 
 
@@ -23,7 +24,7 @@ describe Orderbook do
   end
 
   it "loads full depth orderbook into the storage" do
-    @ob.load
+    @ob.load!
     @ob.items.should == [
       { price: 850, size: 50 },
       { price: 855.5, size: 51 },
@@ -35,8 +36,8 @@ describe Orderbook do
 
     before(:each) do
       @ob2 = Orderbook.new(exchange_adapter: @test_exchange, opposing_orderbook: @ob, direction: -1)
-      @ob2.load
-      @ob.load
+      @ob2.load!
+      @ob.load!
     end
 
     it "updates an existing item incrementing its size by the size of the added one" do
@@ -72,7 +73,7 @@ describe Orderbook do
   describe "removing existing items" do
 
     before(:each) do
-      @ob.load
+      @ob.load!
     end
 
     it "updates an existing item decrementing its size by the size of the removed one" do
@@ -106,7 +107,7 @@ describe Orderbook do
   describe "trading item" do
 
     before(:each) do
-      @ob.load
+      @ob.load!
     end
 
     it "removes items from the head according to the size of the trade" do
@@ -115,6 +116,34 @@ describe Orderbook do
         { price: 855.5, size: 46 },
         { price: 857.3, size: 0.006 }
       ]
+    end
+
+  end
+
+  describe "reacting to exchange's events" do
+
+    before(:each) do
+      @test_exchange.subscribe(@ob)
+    end
+
+    it "adds item to itself" do
+      @test_exchange.publish_event(:order_added, { price: 849.5, size: 50 })
+      @ob.items.should == [{ price: 849.5, size: 50 }]
+    end
+
+    it "removes item from itself" do
+      @ob.load!
+      @test_exchange.publish_event(:order_removed, { price: 850, size: 50 })
+      @ob.items.should == [
+        { price: 855.5, size: 51 },
+        { price: 857.3, size: 0.006 }
+      ]
+    end
+
+    it "trades item" do
+      @ob.load!
+      @test_exchange.publish_event(:order_traded, { price: 850, size: 1000 })
+      @ob.items.should be_empty
     end
 
   end

@@ -48,8 +48,10 @@ module ObservableRoles
     end
 
     def capture_observable_event(role, event_name, data={})
+      role       = role.to_sym
+      event_name = event_name.to_sym
       if self.class.get_observed_publisher_callbacks[role].nil? || self.class.get_observed_publisher_callbacks[role][event_name].nil?
-        raise "No callback for role `#{role}` and event `#{event_name}` defined!"
+        raise "No callback for role `#{role}` and event `#{event_name}` defined in #{self}!"
       end
 
       @captured_observable_events ||= []
@@ -90,8 +92,11 @@ module ObservableRoles
     end
 
     def publish_event(event_name, data={})
+      return unless @observing_subscriber
       @observing_subscriber.each do |s|
-        s.capture_observable_event(role, event_name, data)
+        if !block_given? || yield(s)
+          s.capture_observable_event(role, event_name, data)
+        end
       end
     end
 

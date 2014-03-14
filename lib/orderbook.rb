@@ -3,6 +3,15 @@ class Orderbook
   attr_reader   :exchange_adapter, :items
   attr_accessor :opposing_orderbook
 
+  include ObservableRoles::Subscriber
+
+  set_observed_publisher_callbacks(
+    exchange: { order_added:   -> (me, data) { me.add_item(data[:price], data[:size]    )},
+                order_removed: -> (me, data) { me.remove_item(data[:price], data[:size] )},
+                order_traded:  -> (me, data) { me.trade_item(data[:size]                )}
+    }
+  )
+
   def initialize(exchange_adapter: nil, direction: 1, opposing_orderbook: nil)
     raise "Set exchange adapter!" unless exchange_adapter
     @exchange_adapter = exchange_adapter
@@ -11,7 +20,7 @@ class Orderbook
     self.opposing_orderbook  = opposing_orderbook
   end
 
-  def load
+  def load!
     @exchange_adapter.orders(direction: @direction).each do |item|
       item = @exchange_adapter.class.standartize_item(item)
       add_item(item[:price], item[:size], force: true)
@@ -19,7 +28,7 @@ class Orderbook
   end
   
   def add_item(price, size, force: false)
-    if force || (@opposing_orderbook && price_below?(price, @opposing_orderbook.items.first[:price]))
+    if force || !@opposing_orderbook || @opposing_orderbook.items.empty? || price_below?(price, @opposing_orderbook.items.first[:price])
 
       new_item = { price: price, size: size }
       

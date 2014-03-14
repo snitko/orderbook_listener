@@ -9,10 +9,11 @@ class ExchangeAdapterBase
     @orders       = {}
     @connection   = nil
     @trading_pair = 'USD/BTC'
+    @role         = :exchange
   end
 
   # Freeing the memory here, we don't really need to hold full depth forever,
-  # because it is stored in Redis through the Orderbook object.
+  # because it is stored in the Orderbook object.
   def clear_orderbook!
     @orders = nil
   end
