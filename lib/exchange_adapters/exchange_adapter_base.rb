@@ -19,7 +19,7 @@ class ExchangeAdapterBase
   end
 
   def orders(direction: 1)
-    @orders[direction]
+    { timestamp: @orders[:timestamp].to_i, data: @orders[direction] }
   end
 
   def self.standartize_item(item)

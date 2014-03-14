@@ -38,12 +38,12 @@ describe BitstampAdapter do
   #end
 
   it "fetches full depth orderbook from Bitstamp and converts it into a hash" do
-    @bitstamp.load_orderbook.should == {"timestamp"=>"1394755456", "bids"=>[["640.00", "6.71588852"], ["639.96", "0.02343896"], ["639.92", "0.02344043"]], "asks"=>[["641.02", "0.01587314"], ["642.50", "0.49763960"], ["642.93", "0.05000000"]]} 
+    @bitstamp.load_orderbook!.should == {"timestamp"=>"1394755456", "bids"=>[["640.00", "6.71588852"], ["639.96", "0.02343896"], ["639.92", "0.02344043"]], "asks"=>[["641.02", "0.01587314"], ["642.50", "0.49763960"], ["642.93", "0.05000000"]]} 
   end
 
   it "converts each item in the orderbook into a standard format on demand" do
-    @bitstamp.load_orderbook
-    BitstampAdapter.standartize_item(@bitstamp.orders.first).should == { price: 641.02, size: 0.01587314 }
+    @bitstamp.load_orderbook!
+    BitstampAdapter.standartize_item(@bitstamp.orders[:data].first).should == { price: 641.02, size: 0.01587314 }
   end
   
   it "converts Bitstamp live feed data into a standartized form" do
@@ -55,6 +55,11 @@ describe BitstampAdapter do
       timestamp: 1394809959,
       direction: -1
     }
+  end
+
+  it "returns timestamp from the fulldepth orderbook" do
+    @bitstamp.load_orderbook!
+    @bitstamp.orders[:timestamp].should == 1394755456
   end
 
 end

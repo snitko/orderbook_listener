@@ -3,12 +3,12 @@ require 'pusher-client'
 
 class BitstampAdapter < ExchangeAdapterBase
 
-  def load_orderbook
+  def load_orderbook!
     @orders = JSON.parse(fetch_orderbook)
   end
 
   def orders(direction: 1)
-    @orders[direction == 1 ? 'asks' : 'bids']
+    { timestamp: @orders['timestamp'].to_i, data: @orders[direction == 1 ? 'asks' : 'bids'] }
   end
 
   def self.standartize_item(item)

@@ -14,6 +14,7 @@ describe Orderbook do
   before(:all) do
     @test_exchange        = ExchangeAdapterBase.new
     @test_exchange.orders = {
+      timestamp: 111,
       1  => [{ price: 850, size: 50 }, { price: 855.5, size: 51 }, { price: 857.3, size: 0.006 }],
       -1 => [{ price: 849, size: 50 }, { price: 847.5, size: 51 }, { price: 845.3, size: 0.006 }]
     }
@@ -30,6 +31,7 @@ describe Orderbook do
       { price: 855.5, size: 51 },
       { price: 857.3, size: 0.006 }
     ]
+    @ob.timestamp.should == 111
   end
 
   describe "adding new items" do
@@ -111,7 +113,7 @@ describe Orderbook do
     end
 
     it "removes items from the head according to the size of the trade" do
-      @ob.trade_item(55).should == { 850 => 50, 855.5 => 5 }
+      @ob.trade_item(0, 55).should == { 850 => 50, 855.5 => 5 }
       @ob.items.should == [
         { price: 855.5, size: 46 },
         { price: 857.3, size: 0.006 }
@@ -144,6 +146,11 @@ describe Orderbook do
       @ob.load!
       @test_exchange.publish_event(:order_traded, { price: 850, size: 1000 })
       @ob.items.should be_empty
+    end
+
+    it "updates orderbook timestamp according to the timestamp received from the exchange" do
+      @test_exchange.publish_event(:order_traded, { price: 850, size: 1000, timestamp: 222 })
+      @ob.timestamp.should == 222
     end
 
   end

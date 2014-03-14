@@ -2,13 +2,15 @@ class Orderbook
 
   attr_reader   :exchange_adapter, :items
   attr_accessor :opposing_orderbook
+  attr_reader   :timestamp
 
   include ObservableRoles::Subscriber
 
   set_observed_publisher_callbacks(
-    exchange: { order_added:   -> (me, data) { me.add_item(data[:price], data[:size]    )},
-                order_removed: -> (me, data) { me.remove_item(data[:price], data[:size] )},
-                order_traded:  -> (me, data) { me.trade_item(data[:size]                )}
+    exchange: {
+      order_added:   -> (me, data) { me.apply_exchange_updates('add', data)    },
+      order_removed: -> (me, data) { me.apply_exchange_updates('remove', data) },
+      order_traded:  -> (me, data) { me.apply_exchange_updates('trade', data)  }
     }
   )
 
@@ -21,13 +23,15 @@ class Orderbook
   end
 
   def load!
-    @exchange_adapter.orders(direction: @direction).each do |item|
+    orders = @exchange_adapter.orders(direction: @direction)
+    orders[:data].each do |item|
       item = @exchange_adapter.class.standartize_item(item)
       add_item(item[:price], item[:size], force: true)
     end
+    @timestamp = orders[:timestamp]
   end
   
-  def add_item(price, size, force: false)
+  def add_item(price, size, timestamp: Time.now.to_i, force: false)
     if force || !@opposing_orderbook || @opposing_orderbook.items.empty? || price_below?(price, @opposing_orderbook.items.first[:price])
 
       new_item = { price: price, size: size }
@@ -40,10 +44,12 @@ class Orderbook
         @items << new_item
       end
 
+      @timestamp = timestamp
+
     end
   end
 
-  def remove_item(price, size)
+  def remove_item(price, size, timestamp: Time.now.to_i)
     if item_i = find_item_index_by_price(price)
       if @items[item_i][:size] <= size
         remaining = size - @items.delete_at(item_i)[:size]
@@ -52,13 +58,15 @@ class Orderbook
         @items[item_i][:size] = @items[item_i][:size] - size
         return 0
       end
+      @timestamp = timestamp
     else
       false
     end
   end
 
   # It doesn't matter at what price was the trade made, we always start from the head
-  def trade_item(size)
+  def trade_item(price, size, timestamp: Time.now.to_i)
+    price = nil # is always ignored!
     deals = {}
     while size > 0 && !@items.empty?
       deal_price        = @items.first[:price]
@@ -67,6 +75,7 @@ class Orderbook
       size              = remaining_size
       deals[deal_price] = deal_size
     end
+    @timestamp = timestamp
     return deals
   end
 
@@ -77,6 +86,9 @@ class Orderbook
     end
   end
 
+  def apply_exchange_updates(callback_method_prefix, data)
+    self.send("#{callback_method_prefix}_item", data[:price], data[:size], timestamp: data[:timestamp])
+  end
 
   private
 
