@@ -3,6 +3,7 @@ GEM
   specs:
     ansi (1.4.3)
     diff-lcs (1.2.5)
+    observable_roles (0.1.0)
     pusher-client (0.4.0)
       websocket (~> 1.0.0)
     rspec (2.14.1)
@@ -21,6 +22,7 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
+  observable_roles
   pusher-client
   rspec
   turn

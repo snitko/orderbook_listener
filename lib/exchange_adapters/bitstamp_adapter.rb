@@ -15,6 +15,10 @@ class BitstampAdapter < ExchangeAdapterBase
     { price: item[0].to_f, size: item[1].to_f }
   end
 
+  # Starts new thread for each connection. It's important to remember
+  # that in order for this to keep running, the program should also be running (as a daemon
+  # or maybe within a webserver app, like Sinatra), otherwise those threads are simply destroyed
+  # as soon as the program exits.
   def subscribe_to_trade_data!
     @connection = PusherClient::Socket.new('de504dc5763aeef9ff52')
     @connection.connect(true)
@@ -35,14 +39,19 @@ class BitstampAdapter < ExchangeAdapterBase
       rescue Timeout::Error, Errno::EINVAL, Errno::ECONNRESET, EOFError,
              Net::HTTPBadResponse, Net::HTTPHeaderSyntaxError, Net::ProtocolError => e 
         raise e
-        # retry a couple of times
-        # send email with error
+        # TODO: retry a couple of times
+        # TODO: send email with error
       end
     end
 
+    # Notifies orderbook of a change.
+    # It's wrapper around publish_event methos added to this class
+    # by ObservableRoles::Publisher mixin.
     def publish_ordebook_change(event_name, data)
+
       # Example of Bitstamp JSON data:
-      #   {"price": "733.70", "amount": "0.00360502", "datetime": "1394809959", "id": 19496875, "order_type": 1}
+      #   {"price": "733.70", "amount": "0.00360502",
+      #    "datetime": "1394809959", "id": 19496875, "order_type": 1 }
       
       direction = (data["order_type"] == 1 ? 1 : -1)
 
@@ -52,6 +61,9 @@ class BitstampAdapter < ExchangeAdapterBase
         timestamp: data["datetime"].to_i,
         direction: direction
       }
+
+      # Note the block that is passed. We only want to notify orderbook with the right direction,
+      # that is if the update is to 'asks' orderbook, we only notify 'asks' orderbook.
       publish_event("order_#{event_name}", standartized_data) { |orderbook| orderbook.direction == direction }
     end
 

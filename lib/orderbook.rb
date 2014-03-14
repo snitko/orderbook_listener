@@ -22,6 +22,8 @@ class Orderbook
     self.opposing_orderbook  = opposing_orderbook
   end
 
+  # Populates the orderbook using full depth data from the exchange adapter,
+  # which should have already loaded the orderbook from the exchange API.
   def load!
     orders = @exchange_adapter.orders(direction: @direction)
     orders[:data].each do |item|
@@ -31,6 +33,19 @@ class Orderbook
     @timestamp = orders[:timestamp]
   end
   
+  # Adds new item to the orderbook or updates the size field of the existing one,
+  # in case the price is the same. Unless `force` option is set to true or the oppopsing orderbook is empty
+  # it will ignore all attempts to add an item whose price is below the opposing orderbook head.
+  # If you don't understand why this is important, let me draw you a picture:
+  # 
+  # -----bids------        -----asks-----
+  # PRICE   SIZE           PRICE   SIZE
+  # $850    1.5            $851    1.1
+  # $845    10             $855    12.54534
+  # $840    15.43          $857    3.324
+  #
+  # Now think, would it be okay to add an item with the price of $847 in to the second orderbook?
+  #
   def add_item(price, size, timestamp: Time.now.to_i, force: false)
     if force || !@opposing_orderbook || @opposing_orderbook.items.empty? || price_below?(price, @opposing_orderbook.items.first[:price])
 
@@ -49,6 +64,9 @@ class Orderbook
     end
   end
 
+  # Removes item from the orderbook completely or updates its size
+  # if the size of the item in the orderbook is larger than the size
+  # of the one that is being removed.
   def remove_item(price, size, timestamp: Time.now.to_i)
     if item_i = find_item_index_by_price(price)
       if @items[item_i][:size] <= size
@@ -64,7 +82,10 @@ class Orderbook
     end
   end
 
-  # It doesn't matter at what price was the trade made, we always start from the head
+  # Same as #remove_item with just one crucial distinction:
+  # it doesn't matter at what price was the trade made, we always start from the head
+  # and go down removing all items until we remove enough of them to satisfy the size.
+  # `price` attribute is kept for compatability and is always ignored.
   def trade_item(price, size, timestamp: Time.now.to_i)
     price = nil # is always ignored!
     deals = {}
@@ -79,6 +100,9 @@ class Orderbook
     return deals
   end
 
+  # The concept of an opposing orderbook is important in some circumstances (see #add_item description).
+  # An opposing orderbook for 'bids' (direction: -1) should always be an orderbook of asks (direction: 1)
+  # and vice versa.
   def opposing_orderbook=(ob)
     unless ob.nil?
       @opposing_orderbook   = ob
@@ -86,6 +110,8 @@ class Orderbook
     end
   end
 
+  # This is a wrapper method used by all the exchange callbacks.
+  # Depending on the event that was triggered, we choose the right Orderbook method to call.
   def apply_exchange_updates(callback_method_prefix, data)
     self.send("#{callback_method_prefix}_item", data[:price], data[:size], timestamp: data[:timestamp])
   end

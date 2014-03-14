@@ -1,5 +1,6 @@
 source 'http://rubygems.org'
 
+gem 'observable_roles'
 gem 'pusher-client'
 
 group :test do
