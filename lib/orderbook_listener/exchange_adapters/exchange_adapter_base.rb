@@ -1,7 +1,3 @@
-require 'net/http'
-require 'bundler'
-require 'observable_roles'
-
 class ExchangeAdapterBase
 
   include ObservableRoles::Publisher

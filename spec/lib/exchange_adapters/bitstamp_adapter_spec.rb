@@ -1,7 +1,6 @@
 require 'spec_helper'
 
-require File.dirname(__FILE__) + '/../../../lib/exchange_adapters/exchange_adapter_base'
-require File.dirname(__FILE__) + '/../../../lib/exchange_adapters/bitstamp_adapter'
+require File.dirname(__FILE__) + '/../../../lib/orderbook_listener/exchange_adapters/bitstamp_adapter'
 
 class BitstampListener
 

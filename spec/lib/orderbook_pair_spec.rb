@@ -1,9 +1,5 @@
 require 'spec_helper'
 
-require File.dirname(__FILE__) + '/../../lib/exchange_adapters/exchange_adapter_base'
-require File.dirname(__FILE__) + '/../../lib/orderbook'
-require File.dirname(__FILE__) + '/../../lib/orderbook_pair'
-
 class ExchangeAdapterBase
   attr_writer :orders
   include ObservableRoles::Publisher

@@ -1,3 +1,5 @@
+require File.dirname(__FILE__) + '/../lib/orderbook_listener'
+
 RSpec.configure do |config|
 
   # Remove this line if you don't want RSpec's should and should_not
