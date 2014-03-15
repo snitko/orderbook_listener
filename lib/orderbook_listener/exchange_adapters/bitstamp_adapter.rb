@@ -1,10 +1,18 @@
-require 'json'
 require 'pusher-client'
 
 class BitstampAdapter < ExchangeAdapterBase
 
+  FULL_DEPTH_ORDERBOOK_URL = 'https://www.bitstamp.net/api/order_book/'
+
   def load_orderbook!
     @orders = JSON.parse(fetch_orderbook)
+
+    # Ignore Bitstamp's timestamps they're rather useless
+    # as far as the Orderbook class is concerned. We're better off
+    # using real time instead
+    @orders['timestamp'] = Time.now.to_i
+    
+    return @orders
   end
 
   def orders(direction: 1)
@@ -33,18 +41,6 @@ class BitstampAdapter < ExchangeAdapterBase
 
   private
 
-    def fetch_orderbook
-      url = 'https://www.bitstamp.net/api/order_book/'
-      begin
-        return Net::HTTP.get(URI.parse(url))
-      rescue Timeout::Error, Errno::EINVAL, Errno::ECONNRESET, EOFError,
-             Net::HTTPBadResponse, Net::HTTPHeaderSyntaxError, Net::ProtocolError => e 
-        raise e
-        # TODO: retry a couple of times
-        # TODO: send email with error
-      end
-    end
-
     # Notifies orderbook of a change.
     # It's wrapper around publish_event methos added to this class
     # by ObservableRoles::Publisher mixin.
@@ -62,7 +58,7 @@ class BitstampAdapter < ExchangeAdapterBase
       standartized_data = {
         price:     data["price"].to_f,
         size:      data["amount"].to_f,
-        timestamp: data["datetime"].to_i,
+        timestamp: Time.now.to_i, # Ignore Bitstamp's timestamps
         direction: direction
       }
 

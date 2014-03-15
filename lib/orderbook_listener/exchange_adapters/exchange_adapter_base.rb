@@ -32,4 +32,24 @@ class ExchangeAdapterBase
     item
   end
 
+
+  private
+
+    def fetch_orderbook
+      begin
+        return Net::HTTP.get(URI.parse(full_depth_orderbook_url))
+      rescue Timeout::Error, Errno::EINVAL, Errno::ECONNRESET, EOFError,
+             Net::HTTPBadResponse, Net::HTTPHeaderSyntaxError, Net::ProtocolError => e 
+        raise e
+        # TODO: retry a couple of times
+        # TODO: send email with error
+      end
+    end
+
+    # Redefine this method in descendant classes if you need to add additional parameters to the
+    # url that define, for example, which pair of currencies is loaded.
+    def full_depth_orderbook_url
+      self.class::FULL_DEPTH_ORDERBOOK_URL
+    end
+
 end
