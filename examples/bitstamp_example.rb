@@ -25,11 +25,11 @@ exchange = BitstampAdapter.new
 orderbook_pair = OrderbookPair.new exchange_adapter: exchange 
 orderbook_pair.subscribe(reporter)
 
+puts "Start listening to updates...\n**************************\n"
+exchange.subscribe_to_trade_data!
+
 puts "Loading full depth..."
 orderbook_pair.load!
 puts "...done!"
-
-puts "Start listening to updates...\n**************************\n"
-exchange.subscribe_to_trade_data!
 
 sleep(500)

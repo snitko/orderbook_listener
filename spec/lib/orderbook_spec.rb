@@ -2,9 +2,7 @@ require 'spec_helper'
 
 class ExchangeAdapterBase
   attr_writer :orders
-  include ObservableRoles::Publisher
 end
-
 
 describe Orderbook do
 
@@ -29,6 +27,16 @@ describe Orderbook do
       { price: 857.3, size: 0.006 }
     ]
     @ob.timestamp.should == 111
+  end
+
+  it "ignores all updates with timestamps older than the full_depth_timestamp of the orderbook" do
+    @ob.load!
+    @ob.add_item(865, 1, timestamp: 12) # Timestamp 12 is older than 111 (12 < 111)
+    @ob.items.should_not include({ price: 865, size: 1 })
+    @ob.remove_item(850, 50, timestamp: 12) # Timestamp 12 is older than 111 (12 < 111)
+    @ob.items.should include({ price: 850, size: 50 })
+    @ob.trade_item(0, 50, timestamp: 12) # Timestamp 12 is older than 111 (12 < 111)
+    @ob.items.should include({ price: 850, size: 50 })
   end
 
   describe "adding new items" do
@@ -120,6 +128,10 @@ describe Orderbook do
   end
 
   describe "reacting to exchange's events" do
+
+    before(:each) do
+      @ob.subscriber_lock = false
+    end
 
     it "adds item to itself" do
       @test_exchange.publish_event(:order_added, { price: 849.5, size: 50 })

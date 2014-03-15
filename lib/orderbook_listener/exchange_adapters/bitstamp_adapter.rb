@@ -26,6 +26,7 @@ class BitstampAdapter < ExchangeAdapterBase
     @connection.subscribe('live_trades')
     @connection['live_orders'].bind('order_created') { |data| publish_ordebook_change('added',   data) }
     @connection['live_orders'].bind('order_deleted') { |data| publish_ordebook_change('removed', data) }
+    # TODO: pending support request to Bitstamp, will know what to do with these type of orders soon
     #@connection['live_orders'].bind('order_changed')  { |data| publish_ordebook_change('changed', data) }
     @connection['live_trades'].bind('trade')         { |data| publish_ordebook_change('traded', data)  }
   end

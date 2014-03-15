@@ -1,6 +1,6 @@
 class Orderbook
 
-  attr_reader   :exchange_adapter, :items, :timestamp, :direction
+  attr_reader   :exchange_adapter, :items, :timestamp, :full_depth_timestamp, :direction
   attr_accessor :opposing_orderbook, :role
 
   include ObservableRoles::Subscriber
@@ -28,6 +28,7 @@ class Orderbook
     @items            = []
     @direction        = direction
     @role             = :orderbook
+    @subscriber_lock  = true # true by default, we don't update an empty orderbook
     self.opposing_orderbook  = opposing_orderbook
   end
 
@@ -35,11 +36,14 @@ class Orderbook
   # which should have already loaded the orderbook from the exchange API.
   def load!
     orders = @exchange_adapter.orders(direction: @direction)
+    @subscriber_lock = true
     orders[:data].each do |item|
       item = @exchange_adapter.class.standartize_item(item)
       add_item(item[:price], item[:size], force: true)
     end
-    @timestamp = orders[:timestamp]
+    @subscriber_lock = false
+    @timestamp            = orders[:timestamp]
+    @full_depth_timestamp = @timestamp
   end
   
   # Adds new item to the orderbook or updates the size field of the existing one,
@@ -56,28 +60,39 @@ class Orderbook
   # Now think, would it be okay to add an item with the price of $847 in to the second orderbook?
   #
   def add_item(price, size, timestamp: Time.now.to_i, force: false)
-    if force || !@opposing_orderbook || @opposing_orderbook.items.empty? || price_below?(price, @opposing_orderbook.items.first[:price])
 
-      new_item = { price: price, size: size }
-      
-      if item_i = find_item_index_by_price(price)
-        @items[item_i][:size] = @items[item_i][:size] + size
-      elsif item_i = find_next_item_index_by_price(price)
-        @items.insert(item_i, new_item)
-      else
-        @items << new_item
-      end
+    if !force && (
+          # Do not add orders that are below the head of the opposing orderbook
+          (@opposing_orderbook && !@opposing_orderbook.items.empty? && @opposing_orderbook.price_below?(price, @opposing_orderbook.items.first[:price])) ||
 
-      @timestamp = timestamp
-      publish_event(:item_added, { price: price, size: size, timestamp: timestamp })
-
+          # Do not add orders with timestamp older than the timstamp of a full depth orderbook download
+          (timestamp && @full_depth_timestamp && timestamp <= @full_depth_timestamp)
+        )
+      return false
     end
+    
+    new_item = { price: price, size: size }
+    
+    if item_i = find_item_index_by_price(price)
+      @items[item_i][:size] = @items[item_i][:size] + size
+    elsif item_i = find_next_item_index_by_price(price)
+      @items.insert(item_i, new_item)
+    else
+      @items << new_item
+    end
+
+    @timestamp = timestamp
+    publish_event(:item_added, { price: price, size: size, timestamp: timestamp })
+
   end
 
   # Removes item from the orderbook completely or updates its size
   # if the size of the item in the orderbook is larger than the size
   # of the one that is being removed.
-  def remove_item(price, size, timestamp: Time.now.to_i)
+  def remove_item(price, size, timestamp: Time.now.to_i, force: false)
+    
+    return false if !force && (timestamp && @full_depth_timestamp && timestamp <= @full_depth_timestamp)
+
     if item_i = find_item_index_by_price(price)
       if @items[item_i][:size] <= size
         remaining = size - @items.delete_at(item_i)[:size]
@@ -97,7 +112,10 @@ class Orderbook
   # it doesn't matter at what price was the trade made, we always start from the head
   # and go down removing all items until we remove enough of them to satisfy the size.
   # `price` attribute is kept for compatability and is always ignored.
-  def trade_item(price, size, timestamp: Time.now.to_i)
+  def trade_item(price, size, timestamp: Time.now.to_i, force: false)
+
+    return false if !force && (timestamp && @full_depth_timestamp && timestamp <= @full_depth_timestamp)
+
     publish_event(:item_traded, { size: size, timestamp: timestamp })
     price = nil # is always ignored!
     deals = {}
@@ -128,16 +146,16 @@ class Orderbook
     self.send("#{callback_method_prefix}_item", data[:price], data[:size], timestamp: data[:timestamp])
   end
 
+  def price_below?(price1, price2)
+    if @direction > 0
+      price1 >= price2
+    else
+      price1 <= price2
+    end
+  end
+
 
   private
-
-    def price_below?(price1, price2)
-      if @direction > 0
-        price1 > price2
-      else
-        price1 < price2
-      end
-    end
 
     # Searches items from head to tail until item with the right price is found
     def find_item_index_by_price(price)
