@@ -121,10 +121,6 @@ describe Orderbook do
 
   describe "reacting to exchange's events" do
 
-    before(:each) do
-      @test_exchange.subscribe(@ob)
-    end
-
     it "adds item to itself" do
       @test_exchange.publish_event(:order_added, { price: 849.5, size: 50 })
       @ob.items.should == [{ price: 849.5, size: 50 }]

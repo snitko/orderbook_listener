@@ -33,7 +33,7 @@ class BitstampAdapter < ExchangeAdapterBase
   private
 
     def fetch_orderbook
-      url = 'http://www.bitstamp.net/api/order_book/'
+      url = 'https://www.bitstamp.net/api/order_book/'
       begin
         return Net::HTTP.get(URI.parse(url))
       rescue Timeout::Error, Errno::EINVAL, Errno::ECONNRESET, EOFError,
@@ -52,8 +52,11 @@ class BitstampAdapter < ExchangeAdapterBase
       # Example of Bitstamp JSON data:
       #   {"price": "733.70", "amount": "0.00360502",
       #    "datetime": "1394809959", "id": 19496875, "order_type": 1 }
+      #
+
+      data = JSON.parse(data) if data.kind_of?(String)
       
-      direction = (data["order_type"] == 1 ? 1 : -1)
+      direction = (data["order_type"].to_i == 1 ? 1 : -1)
 
       standartized_data = {
         price:     data["price"].to_f,

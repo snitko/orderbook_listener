@@ -9,11 +9,21 @@ class OrderbookPair
   attr_reader   :bids, :asks
 
   def initialize(exchange_adapter: ExchangeAdapterBase.new)
-    @exchange = exchange
+    @exchange = exchange_adapter
     @bids     = Orderbook.new(direction: -1, exchange_adapter: exchange_adapter)
     @asks     = Orderbook.new(direction:  1, exchange_adapter: exchange_adapter, opposing_orderbook: @bids)
+  end
+
+  def load!
+    @exchange.load_orderbook!
     @bids.load!
     @asks.load!
+    @exchange.clear_orderbook!
+  end
+
+  def subscribe(subscriber)
+    @bids.subscribe(subscriber)
+    @asks.subscribe(subscriber)
   end
 
   def to_json

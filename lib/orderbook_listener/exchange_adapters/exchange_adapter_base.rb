@@ -9,6 +9,9 @@ class ExchangeAdapterBase
     @role         = :exchange
   end
 
+  def load_orderbook!
+  end
+
   # Freeing the memory here, we don't really need to hold full depth forever,
   # because it is stored in the Orderbook object.
   def clear_orderbook!

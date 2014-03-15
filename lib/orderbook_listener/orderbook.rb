@@ -1,10 +1,17 @@
 class Orderbook
 
-  attr_reader   :exchange_adapter, :items
-  attr_accessor :opposing_orderbook
-  attr_reader   :timestamp
+  attr_reader   :exchange_adapter, :items, :timestamp, :direction
+  attr_accessor :opposing_orderbook, :role
 
   include ObservableRoles::Subscriber
+
+  # Because orderbook also publishes its own events,
+  # we include ObservableRoles::Publisher as well.
+  # It's a good idea to seperate exchange adapter events
+  # from Orderbook events, although they might actually be similar,
+  # like adding or removing orderbook items.
+  include ObservableRoles::Publisher
+
 
   set_observed_publisher_callbacks(
     exchange: {
@@ -17,8 +24,10 @@ class Orderbook
   def initialize(exchange_adapter: nil, direction: 1, opposing_orderbook: nil)
     raise "Set exchange adapter!" unless exchange_adapter
     @exchange_adapter = exchange_adapter
+    @exchange_adapter.subscribe(self)
     @items            = []
     @direction        = direction
+    @role             = :orderbook
     self.opposing_orderbook  = opposing_orderbook
   end
 
@@ -60,6 +69,7 @@ class Orderbook
       end
 
       @timestamp = timestamp
+      publish_event(:item_added, { price: price, size: size, timestamp: timestamp })
 
     end
   end
@@ -77,6 +87,7 @@ class Orderbook
         return 0
       end
       @timestamp = timestamp
+      publish_event(:item_removed, { price: price, size: size, timestamp: timestamp })
     else
       false
     end
@@ -87,6 +98,7 @@ class Orderbook
   # and go down removing all items until we remove enough of them to satisfy the size.
   # `price` attribute is kept for compatability and is always ignored.
   def trade_item(price, size, timestamp: Time.now.to_i)
+    publish_event(:item_traded, { size: size, timestamp: timestamp })
     price = nil # is always ignored!
     deals = {}
     while size > 0 && !@items.empty?
@@ -115,6 +127,7 @@ class Orderbook
   def apply_exchange_updates(callback_method_prefix, data)
     self.send("#{callback_method_prefix}_item", data[:price], data[:size], timestamp: data[:timestamp])
   end
+
 
   private
 

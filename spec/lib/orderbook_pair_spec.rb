@@ -15,6 +15,7 @@ describe OrderbookPair do
       -1 => [{ price: 849, size: 50 }, { price: 847.5, size: 51 }, { price: 845.3, size: 0.006 }]
     }
     @orderbook_pair = OrderbookPair.new(exchange_adapter: @exchange)
+    @orderbook_pair.load!
   end
 
   it "combines both orderbooks into JSON with a timestamp" do 
