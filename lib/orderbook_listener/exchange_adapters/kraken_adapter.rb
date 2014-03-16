@@ -9,7 +9,7 @@ class KrakenAdapter < ExchangeAdapterBase
 
     # Kraken doesn't provide timestamp for the orderbook as whole,
     # so we add it ourselevs.
-    @last_update_timestamp = @orders['timestamp'] = Time.now.to_i
+    @orders['timestamp'] = Time.now.to_i
 
     return @orders
   end
@@ -34,10 +34,12 @@ class KrakenAdapter < ExchangeAdapterBase
     # by ObservableRoles::Publisher mixin.
     def publish_ordebook_change(event_name, data)
 
-      # Example of Bitstamp JSON data:
-      #   {"price": "733.70", "amount": "0.00360502",
-      #    "datetime": "1394809959", "id": 19496875, "order_type": 1 }
+      # Example of Kraken JSON data:
       #
+      #  { "result": {"XXBTZUSD": {
+      #    "asks":[["646.00000","0.960",1394838815],["650.00000","0.010",1394884158],["650.10080","0.014",1394846392]],
+      #    "bids":[["640.01000","1.403",1394910367],["640.00000","0.010",1394883827],["637.35372","0.014",1394846392]]
+      #  }}}'
 
       data = JSON.parse(data) if data.kind_of?(String)
       
