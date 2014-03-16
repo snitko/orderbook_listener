@@ -11,9 +11,6 @@ class KrakenAdapter < ExchangeAdapterBase
     # so we add it ourselevs.
     @last_update_timestamp = @orders['timestamp'] = Time.now.to_i
 
-    # Make one uselles request to receive recent trades just to set an ID
-    fetch_data(self.class::RECENT_TRADES_URL + "?pair=#{trading_pair}&since=#{@last_update_timestamp}").inspect
-    
     return @orders
   end
 
@@ -49,7 +46,7 @@ class KrakenAdapter < ExchangeAdapterBase
       standartized_data = {
         price:     data[0].to_f,
         size:      data[1].to_f,
-        # As of now, we can't rely on timstamps with Kraken.
+        # As of now, we can't rely on timestamps with Kraken.
         # Kraken doesn't provide a timestamp for a full depth orderbook
         # so Orderbook can't check it against what we've got here.
         # Thus we use real time.
