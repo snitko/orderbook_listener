@@ -1,5 +1,19 @@
 require 'pusher-client'
 
+
+# Monkey patch to silence the logger
+# ...so annoying.
+module PusherClient
+
+  def self.logger
+    @logger ||= begin
+      require 'logger'
+      Logger.new(File::NULL)
+    end
+  end
+
+end
+
 class BitstampAdapter < ExchangeAdapterBase
 
   FULL_DEPTH_ORDERBOOK_URL = 'https://www.bitstamp.net/api/order_book/'

@@ -6,7 +6,7 @@ require_relative 'orderbook_reporter'
 
 
 reporter = OrderbookReporter.new
-exchange = KrakenAdapter.new
+exchange = BitstampAdapter.new
 orderbook_pair = OrderbookPair.new exchange_adapter: exchange 
 orderbook_pair.subscribe(reporter)
 
