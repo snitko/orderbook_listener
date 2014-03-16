@@ -5,7 +5,7 @@ class BitstampAdapter < ExchangeAdapterBase
   FULL_DEPTH_ORDERBOOK_URL = 'https://www.bitstamp.net/api/order_book/'
 
   def load_orderbook!
-    @orders = JSON.parse(fetch_orderbook)
+    @orders = fetch_data(FULL_DEPTH_ORDERBOOK_URL)
 
     # Ignore Bitstamp's timestamps they're rather useless
     # as far as the Orderbook class is concerned. We're better off

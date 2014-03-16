@@ -16,8 +16,8 @@ end
 
 class BitstampAdapter
   private
-    def fetch_orderbook
-      '{"timestamp": "1394755456", "bids": [["640.00", "6.71588852"], ["639.96", "0.02343896"], ["639.92", "0.02344043"]],"asks": [["641.02", "0.01587314"], ["642.50", "0.49763960"], ["642.93", "0.05000000"]]}'
+    def fetch_data(url)
+      JSON.parse '{"timestamp": "1394755456", "bids": [["640.00", "6.71588852"], ["639.96", "0.02343896"], ["639.92", "0.02344043"]],"asks": [["641.02", "0.01587314"], ["642.50", "0.49763960"], ["642.93", "0.05000000"]]}'
     end
 end
 
@@ -54,11 +54,6 @@ describe BitstampAdapter do
       timestamp: @listener.data[:timestamp],
       direction: -1
     }
-  end
-
-  it "returns timestamp from the fulldepth orderbook" do
-    @bitstamp.load_orderbook!
-    @bitstamp.orders[:timestamp].should_not be_nil
   end
 
 end

@@ -2,10 +2,10 @@ class ExchangeAdapterBase
 
   include ObservableRoles::Publisher
 
-  def initialize
+  def initialize(trading_pair: 'USD/BTC')
     @orders       = {}
     @connection   = nil
-    @trading_pair = 'USD/BTC'
+    @trading_pair = trading_pair
     @role         = :exchange
   end
 
@@ -35,9 +35,9 @@ class ExchangeAdapterBase
 
   private
 
-    def fetch_orderbook
+    def fetch_data(url)
       begin
-        return Net::HTTP.get(URI.parse(full_depth_orderbook_url))
+        return JSON.parse Net::HTTP.get(URI.parse(url))
       rescue Timeout::Error, Errno::EINVAL, Errno::ECONNRESET, EOFError,
              Net::HTTPBadResponse, Net::HTTPHeaderSyntaxError, Net::ProtocolError => e 
         raise e
