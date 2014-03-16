@@ -4,19 +4,43 @@ class ExchangeAdapterBase
   attr_writer :orders
 end
 
+
+class OrderbookReporter
+
+  include ObservableRoles::Subscriber
+
+  set_observed_publisher_callbacks(
+    # Remember, Orderbook is not just a Subscriber to exchange adapter,
+    # it publishes events itself as well! And we define callbacks for these events here.
+    orderbook: {
+      item_added:   -> (me, data) { data.delete(:timestamp); me.add_event(:item_added, data)   },
+      item_removed: -> (me, data) { data.delete(:timestamp); me.add_event(:item_removed, data) }
+    }
+  )
+
+  attr_accessor :events
+
+  def add_event(name, data)
+    @events ||= []
+    @events << { name: name, data: data }
+  end
+
+end
+
+
 describe Orderbook do
 
   before(:all) do
-    @test_exchange        = ExchangeAdapterBase.new
+    @test_exchange = ExchangeAdapterBase.new
+  end
+
+  before(:each) do
+    @ob = Orderbook.new(exchange_adapter: @test_exchange)
     @test_exchange.orders = {
       timestamp: 111,
       1  => [{ price: 850, size: 50 }, { price: 855.5, size: 51 }, { price: 857.3, size: 0.006 }],
       -1 => [{ price: 849, size: 50 }, { price: 847.5, size: 51 }, { price: 845.3, size: 0.006 }]
     }
-  end
-
-  before(:each) do
-    @ob = Orderbook.new(exchange_adapter: @test_exchange)
   end
 
   it "loads full depth orderbook into the storage" do
@@ -37,6 +61,29 @@ describe Orderbook do
     @ob.items.should include({ price: 850, size: 50 })
     @ob.trade_item(0, 50, timestamp: 12) # Timestamp 12 is older than 111 (12 < 111)
     @ob.items.should include({ price: 850, size: 50 })
+  end
+
+  it "when full depth is reloaded, it generates 'item_added' or 'item_removed' events based on the difference" do
+    reporter = OrderbookReporter.new
+    @ob.subscribe(reporter)
+    @ob.load!
+    reporter.events.should == [
+      { name: :item_added, data: { price: 850,   size: 50    }},
+      { name: :item_added, data: { price: 855.5, size: 51    }},
+      { name: :item_added, data: { price: 857.3, size: 0.006 }}
+    ]
+    reporter.events = []
+
+    @test_exchange.orders = {
+      timestamp: 111,
+      1  => [{ price: 850, size: 31 }, { price: 855.5, size: 101 }],
+    }
+    @ob.load!
+    reporter.events.should == [
+      { name: :item_removed, data: { price: 850,   size: 19    }},
+      { name: :item_added,   data: { price: 855.5, size: 50    }},
+      { name: :item_removed, data: { price: 857.3, size: 0.006 }}
+    ]
   end
 
   describe "adding new items" do

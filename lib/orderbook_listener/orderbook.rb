@@ -17,7 +17,8 @@ class Orderbook
     exchange: {
       order_added:   -> (me, data) { me.apply_exchange_updates('add', data)    },
       order_removed: -> (me, data) { me.apply_exchange_updates('remove', data) },
-      order_traded:  -> (me, data) { me.apply_exchange_updates('trade', data)  }
+      order_traded:  -> (me, data) { me.apply_exchange_updates('trade', data)  },
+      full_depth_reloaded: -> (me, data) { me.load! }
     }
   )
 
@@ -34,14 +35,49 @@ class Orderbook
 
   # Populates the orderbook using full depth data from the exchange adapter,
   # which should have already loaded the orderbook from the exchange API.
+  #
+  # This method is capable of generating 'item_added' and 'item_removed' events
+  # by reloading fulldepth - for retarded exchanges API.
+  #
+  # What's retarded? Well, some exchanges don't feed you added and cancelled orders, only traded ones.
+  # Thus we have to support generating 'item_added' and 'item_removed'
+  # events in the Orderbook simply by comparing old full depth with a new full_depth orderbook.
+  # While this might actually be slow and should be properly benchmarked,
+  # I believe it's a nice workaround for now.
   def load!
     orders = @exchange_adapter.orders(direction: @direction)
-    @subscriber_lock = true
-    orders[:data].each do |item|
-      item = @exchange_adapter.class.standartize_item(item)
-      add_item(item[:price], item[:size], force: true)
+    @subscriber_lock   = true
+    standartized_items = []
+    orders[:data].each { |item| standartized_items << @exchange_adapter.class.standartize_item(item) }
+ 
+    standartized_items.each do |item|
+      # Let's not play the game of guessing what's added or removed if we're
+      # populating this orderbook for the first time. Thus, the @full_depth_timestamp check.
+      if @full_depth_timestamp && i = find_item_index_by_price(item[:price])
+        if @items[i][:size] < item[:size]
+          # Update existing items when size increases
+          add_item(item[:price], item[:size]-@items[i][:size], force: true)
+        elsif @items[i][:size] > item[:size]
+          # Update existing items when size decreases
+          remove_item(item[:price], @items[i][:size]-item[:size], force: true)
+        end
+      else
+        # Add a brand new item
+        add_item(item[:price], item[:size], force: true)
+      end
+
     end
-    @subscriber_lock = false
+
+    if @full_depth_timestamp
+      # Remove an item completely by subtracting new orderbook contents
+      # from the old orderbook contents. That way we know for sure which items should
+      # be deleted.
+      (@items - standartized_items).each do |item|
+        remove_item(item[:price], item[:size], force: true)
+      end
+    end
+
+    @subscriber_lock      = false
     @timestamp            = orders[:timestamp]
     @full_depth_timestamp = @timestamp
   end
@@ -94,15 +130,16 @@ class Orderbook
     return false if !force && (timestamp && @full_depth_timestamp && timestamp <= @full_depth_timestamp)
 
     if item_i = find_item_index_by_price(price)
-      if @items[item_i][:size] <= size
+      result = if @items[item_i][:size] <= size
         remaining = size - @items.delete_at(item_i)[:size]
-        return remaining
+        remaining
       else
         @items[item_i][:size] = @items[item_i][:size] - size
-        return 0
+        0
       end
       @timestamp = timestamp
       publish_event(:item_removed, { price: price, size: size, timestamp: timestamp })
+      return result
     else
       false
     end
