@@ -67,12 +67,6 @@ describe Orderbook do
     reporter = OrderbookReporter.new
     @ob.subscribe(reporter)
     @ob.load!
-    reporter.events.should == [
-      { name: :item_added, data: { price: 850,   size: 50    }},
-      { name: :item_added, data: { price: 855.5, size: 51    }},
-      { name: :item_added, data: { price: 857.3, size: 0.006 }}
-    ]
-    reporter.events = []
 
     @test_exchange.orders = {
       timestamp: 111,

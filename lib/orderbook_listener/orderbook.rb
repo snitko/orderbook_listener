@@ -191,6 +191,12 @@ class Orderbook
     end
   end
 
+  # Do not publish events until we load full depth for the first time
+  def publish_event(event_name, data)
+    return unless @full_depth_timestamp
+    super
+  end
+
 
   private
 
