@@ -2,7 +2,7 @@ class ExchangeAdapterBase
 
   include ObservableRoles::Publisher
 
-  def initialize(trading_pair: 'USD/BTC')
+  def initialize(trading_pair: 'USD-BTC')
     @orders       = {}
     @connection   = nil
     @trading_pair = trading_pair

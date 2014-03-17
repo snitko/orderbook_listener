@@ -64,7 +64,7 @@ class KrakenAdapter < ExchangeAdapterBase
     # Convert standart trading pair string representation
     # into what Kraken API understands
     def trading_pair
-      @trading_pair.split('/').reverse.join('/').sub('BTC', 'XBT').sub('/','')
+      @trading_pair.split('-').reverse.join('-').sub('BTC', 'XBT').sub('-','')
     end
 
     def subscribe_to_trades!(condition=true)
