@@ -32,6 +32,8 @@ class ExchangeAdapterBase
     item
   end
 
+  def subscribe_to_trade_data!
+  end
 
   private
 

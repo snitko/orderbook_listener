@@ -5,20 +5,19 @@ require 'json'
 # or possibly some other format.
 class OrderbookPair
 
-  attr_accessor :exchange
+  attr_accessor :exchange_adapter
   attr_reader   :bids, :asks
 
   def initialize(exchange_adapter: ExchangeAdapterBase.new)
-    @exchange = exchange_adapter
-    @bids     = Orderbook.new(direction: -1, exchange_adapter: exchange_adapter)
-    @asks     = Orderbook.new(direction:  1, exchange_adapter: exchange_adapter, opposing_orderbook: @bids)
+    @exchange_adapter = exchange_adapter
+    @bids             = Orderbook.new(direction: -1, exchange_adapter: exchange_adapter)
+    @asks             = Orderbook.new(direction:  1, exchange_adapter: exchange_adapter, opposing_orderbook: @bids)
   end
 
   def load!
-    @exchange.load_orderbook!
+    @exchange_adapter.load_orderbook!
     @bids.load!
     @asks.load!
-    @exchange.clear_orderbook!
   end
 
   def subscribe(subscriber)
