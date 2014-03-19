@@ -25,6 +25,11 @@ class OrderbookPair
     @asks.subscribe(subscriber)
   end
 
+  def unsubscribe(subscriber)
+    @bids.unsubscribe(subscriber)
+    @asks.unsubscribe(subscriber)
+  end
+
   def to_json
     timestamp = @bids.timestamp > @asks.timestamp ? @bids.timestamp : @asks.timestamp
     { :timestamp => timestamp, bids: @bids.items, asks: @asks.items }.to_json
