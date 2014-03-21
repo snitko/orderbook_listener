@@ -153,7 +153,7 @@ class Orderbook
 
     return false if !force && (timestamp && @full_depth_timestamp && timestamp <= @full_depth_timestamp)
 
-    publish_event(:item_traded, { size: size, timestamp: timestamp })
+    publish_event(:item_traded, { price: price, size: size, timestamp: timestamp })
     price = nil # is always ignored!
     deals = {}
     while size > 0 && !@items.empty?
@@ -194,7 +194,8 @@ class Orderbook
   # Do not publish events until we load full depth for the first time
   def publish_event(event_name, data)
     return unless @full_depth_timestamp
-    super
+    data.merge!({direction: @direction})
+    super(event_name, data)
   end
 
 

@@ -74,9 +74,9 @@ describe Orderbook do
     }
     @ob.load!
     reporter.events.should == [
-      { name: :item_removed, data: { price: 850,   size: 19    }},
-      { name: :item_added,   data: { price: 855.5, size: 50    }},
-      { name: :item_removed, data: { price: 857.3, size: 0.006 }}
+      { name: :item_removed, data: { price: 850,   size: 19,    direction: 1 }},
+      { name: :item_added,   data: { price: 855.5, size: 50,    direction: 1 }},
+      { name: :item_removed, data: { price: 857.3, size: 0.006, direction: 1 }}
     ]
   end
 
